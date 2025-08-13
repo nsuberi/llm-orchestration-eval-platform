@@ -1,0 +1,101 @@
+name: Deploy
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build-and-deploy-dev:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_CI_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+      - name: Login to ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+      - name: Build and push images (dev)
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          API_REPO=${REGISTRY}/clintestbench-api
+          FE_REPO=${REGISTRY}/clintestbench-frontend
+          API_TAG=${API_REPO}:dev-${GITHUB_SHA}
+          FE_TAG=${FE_REPO}:dev-${GITHUB_SHA}
+          echo "API_TAG=${API_TAG}" >> $GITHUB_ENV
+          echo "FE_TAG=${FE_TAG}" >> $GITHUB_ENV
+          docker build -t ${API_TAG} -f services/api/Dockerfile .
+          docker push ${API_TAG}
+          docker build --build-arg NEXT_PUBLIC_API_BASE=http://api.dev.svc.cluster.local -t ${FE_TAG} -f apps/frontend/Dockerfile .
+          docker push ${FE_TAG}
+      - name: Terraform init/plan/apply (dev)
+        working-directory: infra/terraform
+        env:
+          TF_VAR_enable_prod: "false"
+        run: |
+          terraform init -input=false
+          terraform plan -input=false -out=tfplan \
+            -var api_image=${{ env.API_TAG }} \
+            -var frontend_image=${{ env.FE_TAG }}
+          terraform apply -auto-approve tfplan
+
+  release-prod:
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_CI_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+      - name: Login to ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+      - name: Build and push images (prod)
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          API_REPO=${REGISTRY}/clintestbench-api
+          FE_REPO=${REGISTRY}/clintestbench-frontend
+          API_TAG=${API_REPO}:${GITHUB_REF_NAME}
+          FE_TAG=${FE_REPO}:${GITHUB_REF_NAME}
+          echo "API_TAG=${API_TAG}" >> $GITHUB_ENV
+          echo "FE_TAG=${FE_TAG}" >> $GITHUB_ENV
+          docker build -t ${API_TAG} -f services/api/Dockerfile .
+          docker push ${API_TAG}
+          docker build --build-arg NEXT_PUBLIC_API_BASE=http://api.prod.svc.cluster.local -t ${FE_TAG} -f apps/frontend/Dockerfile .
+          docker push ${FE_TAG}
+      - name: Terraform init/plan (prod)
+        working-directory: infra/terraform
+        env:
+          TF_VAR_enable_dev: "false"
+        run: |
+          terraform init -input=false
+          terraform plan -input=false -var enable_prod=true -out=tfplan \
+            -var api_image=${{ env.API_TAG }} \
+            -var frontend_image=${{ env.FE_TAG }}
+      - name: Manual approval
+        uses: trstringer/manual-approval@v1
+        with:
+          secret: ${{ github.TOKEN }}
+          approvers: ${{ github.actor }}
+          minimum-approvals: 1
+      - name: Terraform apply (prod)
+        working-directory: infra/terraform
+        run: |
+          terraform apply -auto-approve tfplan

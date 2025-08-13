@@ -1,0 +1,17 @@
+# Node
+node_modules/
+npm-debug.log
+pnpm-lock.yaml
+yarn.lock
+# Python
+__pycache__/
+*.pyc
+.venv/
+# Misc
+dist/
+.build/
+.env
+.env.*
+.work/
+.coverage
+coverage/

@@ -1,0 +1,35 @@
+graph: "clinical_note_v15"
+inputs:
+  - transcript_uri
+  - emr_context_json
+nodes:
+  asr_selector:
+    type: router
+    on:
+      long_audio: "batch_asr"
+      default: "stream_asr"
+  batch_asr:
+    type: tool
+    uses: tools.asr_batch
+  stream_asr:
+    type: tool
+    uses: tools.asr_stream
+  entity_extract:
+    type: llm
+    model: "gpt-4o-mini"
+    prompt: "prompts/clinical_entities_v7.md"
+    tools: [ "icd10_lookup", "rxnorm_lookup" ]
+  note_synth:
+    type: llm
+    model: "claude-3.7-sonnet"
+    prompt: "prompts/soap_v9.md"
+    inputs: [ "entity_extract.output", "emr_context_json" ]
+  evidence_linker:
+    type: tool
+    uses: tools.align_spans_to_transcript
+edges:
+  - asr_selector -> batch_asr
+  - asr_selector -> stream_asr
+  - (batch_asr|stream_asr) -> entity_extract
+  - entity_extract -> note_synth
+  - (note_synth, transcript_uri) -> evidence_linker

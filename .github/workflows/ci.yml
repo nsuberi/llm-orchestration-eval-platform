@@ -1,0 +1,30 @@
+name: CI
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - run: cd apps/web && npm ci
+      - run: cd apps/web && npm run lint
+      - run: cd apps/web && npm test -- --coverage
+  api:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11' }
+      - run: pip install -r services/api/requirements.txt
+      - run: pytest -q --maxfail=1 --disable-warnings --cov=services/api
+  workers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11' }
+      - run: pip install -r workers/runner/requirements.txt
+      - run: pytest -q --maxfail=1 --disable-warnings --cov=workers/runner

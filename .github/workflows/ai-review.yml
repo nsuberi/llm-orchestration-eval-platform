@@ -1,0 +1,31 @@
+name: AI Review
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+permissions:
+  contents: read
+  pull-requests: write
+jobs:
+  ai_review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate AI review (placeholder)
+        id: review
+        run: |
+          echo "review<<EOF" >> $GITHUB_OUTPUT
+          echo "MOCK: connect this step to your LLM provider. Checklist:
+- TDD observed?
+- Tests adequate?
+- Security/privacy sane?
+- Acceptance criteria met?
+- Perf implications considered?
+- Docs/Changelog updated?
+Verdict: APPROVE (placeholder)" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+      - name: Post review comment
+        uses: thollander/actions-comment-pull-request@v2
+        with:
+          message: |
+            ### 🤖 AI Review (placeholder)
+            ${{ steps.review.outputs.review }}

@@ -1,0 +1,4 @@
+/apps/web/           @your-org/web-owners
+/services/api/       @your-org/backend-owners
+/workers/runner/     @your-org/ml-owners
+/.github/            @your-org/devx-owners
