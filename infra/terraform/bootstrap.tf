@@ -131,6 +131,29 @@ resource "aws_iam_policy" "bootstrap_base" {
           "arn:${local.partition}:ecr:${local.region}:${local.account_id}:repository/${local.cluster_prefix}-*"
         ]
       },
+      # ECR push/pull for our repositories and auth token
+      {
+        Sid      = "EcrGetAuthToken"
+        Effect   = "Allow"
+        Action   = ["ecr:GetAuthorizationToken"]
+        Resource = "*"
+      },
+      {
+        Sid    = "EcrPushPullClusterRepos"
+        Effect = "Allow"
+        Action = [
+          "ecr:BatchCheckLayerAvailability",
+          "ecr:CompleteLayerUpload",
+          "ecr:InitiateLayerUpload",
+          "ecr:PutImage",
+          "ecr:UploadLayerPart",
+          "ecr:BatchGetImage",
+          "ecr:GetDownloadUrlForLayer"
+        ]
+        Resource = [
+          "arn:${local.partition}:ecr:${local.region}:${local.account_id}:repository/${local.cluster_prefix}-*"
+        ]
+      },
 
       # CloudWatch Logs for EKS control plane logging
       {
@@ -151,6 +174,85 @@ resource "aws_iam_policy" "bootstrap_base" {
         Effect   = "Allow"
         Action   = ["autoscaling:*"]
         Resource = "*"
+      },
+
+      # Manage IAM OIDC providers (for IRSA and GitHub OIDC where needed)
+      {
+        Sid    = "IamManageOidcProviders"
+        Effect = "Allow"
+        Action = [
+          "iam:CreateOpenIDConnectProvider",
+          "iam:DeleteOpenIDConnectProvider",
+          "iam:UpdateOpenIDConnectProviderThumbprint",
+          "iam:GetOpenIDConnectProvider",
+          "iam:ListOpenIDConnectProviders"
+        ]
+        Resource = "*"
+      },
+
+      # Allow creating service-linked roles required by AWS services we use
+      {
+        Sid      = "IamCreateServiceLinkedRole"
+        Effect   = "Allow"
+        Action   = ["iam:CreateServiceLinkedRole"]
+        Resource = "*"
+        Condition = {
+          StringEquals = {
+            "iam:AWSServiceName" = [
+              "eks.amazonaws.com",
+              "eks-nodegroup.amazonaws.com",
+              "eks-fargate.amazonaws.com",
+              "autoscaling.amazonaws.com",
+              "elasticloadbalancing.amazonaws.com"
+            ]
+          }
+        }
+      },
+
+      # S3 access for Terraform remote state backend key
+      {
+        Sid      = "S3StateBucketList"
+        Effect   = "Allow"
+        Action   = [
+          "s3:ListBucket",
+          "s3:GetBucketLocation"
+        ]
+        Resource = "arn:${local.partition}:s3:::cooking-up-ideas-tf-state"
+        Condition = {
+          StringLike = {
+            "s3:prefix" = [
+              "kubernetes-experiment-platform/*",
+              "kubernetes-experiment-platform"
+            ]
+          }
+        }
+      },
+      {
+        Sid      = "S3StateObjectCRUD"
+        Effect   = "Allow"
+        Action   = [
+          "s3:GetObject",
+          "s3:PutObject",
+          "s3:DeleteObject"
+        ]
+        Resource = "arn:${local.partition}:s3:::cooking-up-ideas-tf-state/kubernetes-experiment-platform/*"
+      },
+
+      # DynamoDB table for Terraform state locking
+      {
+        Sid      = "DynamoDbLockTableCRUD",
+        Effect   = "Allow",
+        Action   = [
+          "dynamodb:DescribeTable",
+          "dynamodb:CreateTable",
+          "dynamodb:DeleteTable",
+          "dynamodb:UpdateTable",
+          "dynamodb:PutItem",
+          "dynamodb:GetItem",
+          "dynamodb:DeleteItem",
+          "dynamodb:Scan"
+        ],
+        Resource = "arn:${local.partition}:dynamodb:${local.region}:${local.account_id}:table/kubernetes-experiment-platform-tf-locks"
       },
 
       # Basic STS to introspect account

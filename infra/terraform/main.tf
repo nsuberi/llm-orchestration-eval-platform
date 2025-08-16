@@ -5,6 +5,7 @@ terraform {
     key    = "kubernetes-experiment-platform/terraform.tfstate"
     region = "us-east-1"
     encrypt = true
+    dynamodb_table = "kubernetes-experiment-platform-tf-locks"
   }
   required_providers {
     aws = {
@@ -20,6 +21,18 @@ terraform {
 
 provider "aws" {
   region = var.aws_region
+}
+
+# Table for Terraform state locking. Safe to keep here so the first apply creates the lock table.
+resource "aws_dynamodb_table" "tf_locks" {
+  name         = "kubernetes-experiment-platform-tf-locks"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "LockID"
+
+  attribute {
+    name = "LockID"
+    type = "S"
+  }
 }
 
 # VPC for EKS
