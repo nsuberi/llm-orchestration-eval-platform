@@ -29,8 +29,9 @@ jobs:
         env:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
-          API_REPO=${REGISTRY}/clintestbench-api
-          FE_REPO=${REGISTRY}/clintestbench-frontend
+          # Discover ECR repo URLs from Terraform outputs for consistency
+          API_REPO=$(cd infra/terraform && terraform output -raw ecr_api_repo_url)
+          FE_REPO=$(cd infra/terraform && terraform output -raw ecr_frontend_repo_url)
           API_TAG=${API_REPO}:dev-${GITHUB_SHA}
           FE_TAG=${FE_REPO}:dev-${GITHUB_SHA}
           echo "API_TAG=${API_TAG}" >> $GITHUB_ENV
@@ -70,8 +71,8 @@ jobs:
         env:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
-          API_REPO=${REGISTRY}/clintestbench-api
-          FE_REPO=${REGISTRY}/clintestbench-frontend
+          API_REPO=$(cd infra/terraform && terraform output -raw ecr_api_repo_url)
+          FE_REPO=$(cd infra/terraform && terraform output -raw ecr_frontend_repo_url)
           API_TAG=${API_REPO}:${GITHUB_REF_NAME}
           FE_TAG=${FE_REPO}:${GITHUB_REF_NAME}
           echo "API_TAG=${API_TAG}" >> $GITHUB_ENV

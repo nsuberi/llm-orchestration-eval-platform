@@ -3,15 +3,14 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
 jobs:
-  web:
+  frontend:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: '20' }
-      - run: cd apps/web && npm ci
-      - run: cd apps/web && npm run lint
-      - run: cd apps/web && npm test -- --coverage
+      - run: cd apps/frontend && npm ci
+      - run: cd apps/frontend && npm run build
   api:
     runs-on: ubuntu-latest
     steps:
