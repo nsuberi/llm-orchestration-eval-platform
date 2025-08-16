@@ -5,7 +5,7 @@ This guide bootstraps AWS IAM OIDC auth for this repo so GitHub Actions can assu
 ## Prerequisites
 - AWS CLI v2 installed and authenticated (`aws configure` or SSO). The caller must have IAM permissions to create an OIDC provider and roles.
 - GitHub CLI (`gh`) authenticated for this repo (optional but recommended to automate adding the repo secret).
-- Repo has a workflow that uses `aws-actions/configure-aws-credentials@v4` with `role-to-assume` (this repo's `deploy.yml` supports keys and OIDC).
+- Repo has a workflow that uses `aws-actions/configure-aws-credentials@v4` with `role-to-assume`. This repo's `deploy.yml` is OIDC-only; static access keys are no longer used.
 
 ## What this does
 1. Ensures the AWS IAM OIDC provider for `token.actions.githubusercontent.com` exists in your account.
@@ -19,7 +19,7 @@ You can run the following commands manually, or run the bootstrap script below.
 Set variables:
 ```bash
 # Required: your GitHub repo in OWNER/REPO form
-OWNER_REPO="<owner>/<repo>"
+OWNER_REPO="nsuberi/llm-orchestration-eval-platform"
 # Optional: role name and region
 ROLE_NAME=${ROLE_NAME:-github-actions-terraform-bootstrap}
 AWS_REGION=${AWS_REGION:-us-east-1}
@@ -113,9 +113,9 @@ fi
 ```
 
 ## Update workflows
-This repo's `deploy.yml` already supports both static keys and an optional `role-to-assume`. After the secret is set:
-- Prefer OIDC: remove `aws-access-key-id` and `aws-secret-access-key` from the AWS credentials step so no static keys are used.
+This repo's `deploy.yml` is configured for OIDC-only. After the secret is set:
 - Ensure the job has `permissions: id-token: write` (already present).
+- Do not set or store `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` in repo or org secrets.
 
 Example OIDC‑only snippet:
 ```yaml
