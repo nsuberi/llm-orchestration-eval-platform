@@ -23,7 +23,6 @@ npm install
 npm test
 ```
 - Or run individually:
-  - Web (Vitest): `npm -w apps/web test`
   - Python (pytest via conda): `conda run -n ctb pytest -q --maxfail=1 --disable-warnings`
 
 ### Run services locally (dev mode)
@@ -92,5 +91,4 @@ kubectl -n dev port-forward svc/frontend 3000:80
 - Stress (≥10,000): weekly scale run
 
 ### Linting and type checks (optional)
-- Web lint: `npm -w apps/web run lint`
 - Python format/lint (if adopted later): `ruff`, `black`, `mypy` (add to environment.yml when needed)

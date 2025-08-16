@@ -8,11 +8,9 @@
     "packages/*"
   ],
   "scripts": {
-    "test": "npm -w apps/web test && conda run -n ctb pytest -q --maxfail=1 --disable-warnings",
+    "test": "conda run -n ctb pytest -q --maxfail=1 --disable-warnings",
     "build:frontend": "npm -w apps/frontend run build",
     "dev:frontend": "npm -w apps/frontend run dev",
-    "lint": "npm -w apps/web run lint",
-    "ci:web": "npm -w apps/web ci && npm -w apps/web run lint && npm -w apps/web test -- --coverage",
     "ci:api": "conda run -n ctb pytest -q --maxfail=1 --disable-warnings --cov=services/api",
     "ci:workers": "conda run -n ctb pytest -q --maxfail=1 --disable-warnings --cov=workers/runner"
   },
