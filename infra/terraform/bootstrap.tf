@@ -238,22 +238,7 @@ resource "aws_iam_policy" "bootstrap_base" {
         Resource = "arn:${local.partition}:s3:::cooking-up-ideas-tf-state/kubernetes-experiment-platform/*"
       },
 
-      # DynamoDB table for Terraform state locking
-      {
-        Sid      = "DynamoDbLockTableCRUD",
-        Effect   = "Allow",
-        Action   = [
-          "dynamodb:DescribeTable",
-          "dynamodb:CreateTable",
-          "dynamodb:DeleteTable",
-          "dynamodb:UpdateTable",
-          "dynamodb:PutItem",
-          "dynamodb:GetItem",
-          "dynamodb:DeleteItem",
-          "dynamodb:Scan"
-        ],
-        Resource = "arn:${local.partition}:dynamodb:${local.region}:${local.account_id}:table/kubernetes-experiment-platform-tf-locks"
-      },
+      # No DynamoDB needed; S3 backend uses object lockfile
 
       # Basic STS to introspect account
       {
