@@ -15,10 +15,6 @@ terraform {
       source  = "hashicorp/kubernetes"
       version = ">= 2.24"
     }
-    cloudflare = {
-      source  = "cloudflare/cloudflare"
-      version = ">= 4.0"
-    }
   }
 }
 
@@ -26,9 +22,6 @@ provider "aws" {
   region = var.aws_region
 }
 
-provider "cloudflare" {
-  api_token = var.cloudflare_api_token
-}
 
 # VPC for EKS
 module "vpc" {
@@ -129,21 +122,12 @@ output "frontend_prod_lb_hostname" {
 }
 
 module "dns_frontend" {
-  count          = (!var.enable_cloudflare && local.frontend_lb_hostname != "") ? 1 : 0
+  count          = local.frontend_lb_hostname != "" ? 1 : 0
   source         = "./modules/alb_dns"
   hosted_zone_id = var.route53_zone_id
   subdomain      = "evals"
   environment    = "${var.enable_prod ? "prod" : "dev"}"
   lb_hostname    = local.frontend_lb_hostname
-}
-
-module "cloudflare_frontend" {
-  count            = (var.enable_cloudflare && local.frontend_lb_hostname != "") ? 1 : 0
-  source           = "./modules/cloudflare_dns"
-  zone_id          = var.cloudflare_zone_id
-  subdomain        = "evals"
-  target_hostname  = local.frontend_lb_hostname
-  proxied          = true
 }
 
 // Kubernetes workloads moved to modules/k8s
