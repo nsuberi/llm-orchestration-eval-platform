@@ -3,10 +3,23 @@
 ### Usage
 ```bash
 cd infra/terraform
+# 1) Assume the bootstrap role using your admin IAM user credentials
+ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+ROLE_NAME=${ROLE_NAME:-github-actions-terraform-bootstrap}
+ROLE_ARN="arn:aws:iam::${ACCOUNT_ID}:role/${ROLE_NAME}"
+
+# Obtain short-lived credentials
+CREDS=$(aws sts assume-role --role-arn "$ROLE_ARN" --role-session-name tf-admin --duration-seconds 3600)
+export AWS_ACCESS_KEY_ID=$(echo "$CREDS" | jq -r .Credentials.AccessKeyId)
+export AWS_SECRET_ACCESS_KEY=$(echo "$CREDS" | jq -r .Credentials.SecretAccessKey)
+export AWS_SESSION_TOKEN=$(echo "$CREDS" | jq -r .Credentials.SessionToken)
+
+# 2) Run Terraform with the assumed role
 terraform init
-terraform apply -auto-approve \
-  -var admin_user_arn=arn:aws:iam::671388079324:user/nsuberi \
-  -var aws_region=us-east-1
+terraform apply -auto-approve -var aws_region=us-east-1 \
+  -var enable_cloudflare=true \
+  -var cloudflare_zone_id=<CLOUDFLARE_ZONE_ID> \
+  -var cloudflare_api_token=$CLOUDFLARE_API_TOKEN
 ```
 
 This will provision:
@@ -18,7 +31,7 @@ This will provision:
   - prod namespace deployer: `${cluster_name}-prod-k8s-access`
   - CI deployer (AdministratorAccess for prototype): `${cluster_name}-ci-deployer`
 
-The roles trust the provided IAM user ARN by default. Replace `admin_user_arn` as needed.
+Terraform is expected to run under the assumed bootstrap role.
 
 ### GitHub Actions
 Set secret `AWS_CI_DEPLOY_ROLE_ARN` to the CI deployer role ARN output by Terraform.

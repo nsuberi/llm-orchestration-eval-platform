@@ -58,3 +58,27 @@ variable "environment" {
   type        = string
   default     = "dev"
 }
+
+variable "enable_cloudflare" {
+  description = "Enable Cloudflare-managed subdomain and proxy for evals.cookinupideas.com"
+  type        = bool
+  default     = false
+}
+
+variable "cloudflare_api_token" {
+  description = "Cloudflare API token with DNS edit for the zone"
+  type        = string
+  default     = ""
+}
+
+variable "cloudflare_zone_id" {
+  description = "Cloudflare Zone ID for cookinupideas.com (if using Cloudflare)"
+  type        = string
+  default     = ""
+}
+
+variable "cloudflare_ssl_mode" {
+  description = "Cloudflare SSL mode: off, flexible, full, strict"
+  type        = string
+  default     = "flexible"
+}
