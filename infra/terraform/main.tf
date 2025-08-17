@@ -77,7 +77,7 @@ module "k8s" {
 }
 
 locals {
-  frontend_lb_hostname = module.k8s.frontend_prod_lb_hostname != "" ? module.k8s.frontend_prod_lb_hostname : module.k8s.frontend_dev_lb_hostname
+  frontend_lb_hostname = coalesce(try(module.k8s.frontend_prod_lb_hostname, null), try(module.k8s.frontend_dev_lb_hostname, null))
 }
 output "cluster_name" {
   value = module.eks.cluster_name
