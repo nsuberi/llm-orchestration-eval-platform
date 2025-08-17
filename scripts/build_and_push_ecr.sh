@@ -81,7 +81,6 @@ build_and_push() {
   local image="$1"; shift
   local dockerfile="$1"; shift
   local context_dir="$1"; shift
-  local extra_args=("$@")
 
   echo "Building $image (platform: $PLATFORM)"
   if [[ $USE_BUILDX -eq 1 ]]; then
@@ -89,7 +88,6 @@ build_and_push() {
       --platform "$PLATFORM" \
       -t "$image:$TAG" \
       -f "$REPO_ROOT/$dockerfile" \
-      "${extra_args[@]}" \
       "$REPO_ROOT/$context_dir" \
       --push
   else
@@ -97,7 +95,6 @@ build_and_push() {
       --platform "$PLATFORM" \
       -t "$image:$TAG" \
       -f "$REPO_ROOT/$dockerfile" \
-      "${extra_args[@]}" \
       "$REPO_ROOT/$context_dir"
     echo "Pushing $image:$TAG"
     docker push "$image:$TAG"
