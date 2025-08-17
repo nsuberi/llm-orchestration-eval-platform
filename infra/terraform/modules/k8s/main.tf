@@ -1,3 +1,9 @@
+resource "aws_acm_certificate" "frontend_cert" {
+  domain_name       = "evals.cookinupideas.com"
+  validation_method = "DNS"
+  lifecycle { create_before_destroy = true }
+}
+
 # Namespaces
 resource "kubernetes_namespace" "dev" {
   count = var.enable_dev ? 1 : 0
@@ -134,23 +140,39 @@ resource "kubernetes_deployment" "frontend_dev" {
   }
 }
 
-resource "kubernetes_service" "frontend_dev" {
+resource "kubernetes_ingress_v1" "frontend_dev" {
   count = var.enable_dev && length(trimspace(var.frontend_image)) > 0 ? 1 : 0
   metadata {
     name      = "frontend"
     namespace = kubernetes_namespace.dev[0].metadata[0].name
     annotations = {
-      "service.beta.kubernetes.io/aws-load-balancer-type"   = "nlb"
-      "service.beta.kubernetes.io/aws-load-balancer-scheme" = "internet-facing"
+      "kubernetes.io/ingress.class"                    = "alb"
+      "alb.ingress.kubernetes.io/scheme"               = "internet-facing"
+      "alb.ingress.kubernetes.io/target-type"          = "ip"
+      "alb.ingress.kubernetes.io/listen-ports"         = "[{\"HTTPS\":443}]"
+      "alb.ingress.kubernetes.io/ssl-redirect"         = "443"
+      "alb.ingress.kubernetes.io/certificate-arn"      = aws_acm_certificate.frontend_cert.arn
     }
   }
   spec {
-    selector = { app = "frontend" }
-    port {
-      port        = 80
-      target_port = 3000
+    tls {
+      hosts      = ["evals.cookinupideas.com"]
+      secret_name = "inline"
     }
-    type = "LoadBalancer"
+    rule {
+      http {
+        path {
+          path      = "/"
+          path_type = "Prefix"
+          backend {
+            service {
+              name = kubernetes_service.frontend_dev.metadata[0].name
+              port { number = 80 }
+            }
+          }
+        }
+      }
+    }
   }
 }
 
@@ -240,22 +262,38 @@ resource "kubernetes_deployment" "frontend_prod" {
   }
 }
 
-resource "kubernetes_service" "frontend_prod" {
+resource "kubernetes_ingress_v1" "frontend_prod" {
   count = var.enable_prod && length(trimspace(var.frontend_image)) > 0 ? 1 : 0
   metadata {
     name      = "frontend"
     namespace = kubernetes_namespace.prod[0].metadata[0].name
     annotations = {
-      "service.beta.kubernetes.io/aws-load-balancer-type"   = "nlb"
-      "service.beta.kubernetes.io/aws-load-balancer-scheme" = "internet-facing"
+      "kubernetes.io/ingress.class"                    = "alb"
+      "alb.ingress.kubernetes.io/scheme"               = "internet-facing"
+      "alb.ingress.kubernetes.io/target-type"          = "ip"
+      "alb.ingress.kubernetes.io/listen-ports"         = "[{\"HTTPS\":443}]"
+      "alb.ingress.kubernetes.io/ssl-redirect"         = "443"
+      "alb.ingress.kubernetes.io/certificate-arn"      = aws_acm_certificate.frontend_cert.arn
     }
   }
   spec {
-    selector = { app = "frontend" }
-    port {
-      port        = 80
-      target_port = 3000
+    tls {
+      hosts      = ["evals.cookinupideas.com"]
+      secret_name = "inline"
     }
-    type = "LoadBalancer"
+    rule {
+      http {
+        path {
+          path      = "/"
+          path_type = "Prefix"
+          backend {
+            service {
+              name = kubernetes_service.frontend_prod.metadata[0].name
+              port { number = 80 }
+            }
+          }
+        }
+      }
+    }
   }
 }
