@@ -122,7 +122,6 @@ output "frontend_prod_lb_hostname" {
 }
 
 module "dns_frontend" {
-  count          = local.frontend_lb_hostname != "" ? 1 : 0
   source         = "./modules/alb_dns"
   hosted_zone_id = var.route53_zone_id
   subdomain      = "evals"
