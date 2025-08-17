@@ -140,6 +140,22 @@ resource "kubernetes_deployment" "frontend_dev" {
   }
 }
 
+resource "kubernetes_service" "frontend_dev" {
+  count = var.enable_dev && length(trimspace(var.frontend_image)) > 0 ? 1 : 0
+  metadata {
+    name      = "frontend"
+    namespace = kubernetes_namespace.dev[0].metadata[0].name
+  }
+  spec {
+    selector = { app = "frontend" }
+    port {
+      port        = 80
+      target_port = 3000
+    }
+    type = "ClusterIP"
+  }
+}
+
 resource "kubernetes_ingress_v1" "frontend_dev" {
   count = var.enable_dev && length(trimspace(var.frontend_image)) > 0 ? 1 : 0
   metadata {
@@ -259,6 +275,22 @@ resource "kubernetes_deployment" "frontend_prod" {
         }
       }
     }
+  }
+}
+
+resource "kubernetes_service" "frontend_prod" {
+  count = var.enable_prod && length(trimspace(var.frontend_image)) > 0 ? 1 : 0
+  metadata {
+    name      = "frontend"
+    namespace = kubernetes_namespace.prod[0].metadata[0].name
+  }
+  spec {
+    selector = { app = "frontend" }
+    port {
+      port        = 80
+      target_port = 3000
+    }
+    type = "ClusterIP"
   }
 }
 
