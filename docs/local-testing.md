@@ -85,6 +85,38 @@ kubectl -n dev port-forward svc/frontend 3000:80
 # open http://localhost:3000
 ```
 
+### Teardown AWS/EKS (stop cloud spend)
+
+- Option A (recommended): via GitHub Actions
+  - Go to GitHub → Actions → "Teardown (Destroy AWS + K8s)".
+  - Click "Run workflow", pick the commit/branch, and type `DESTROY` to confirm.
+  - This destroys the EKS cluster, ALBs, NAT Gateway, VPC, and ECR repos.
+
+- Option B: locally with Terraform (requires AWS credentials)
+  - Ensure your AWS CLI is authenticated (or you can assume the bootstrap role). Quick check:
+    ```bash
+    aws sts get-caller-identity
+    ```
+  - Dry-run first:
+    ```bash
+    cd infra/terraform
+    terraform init -input=false
+    terraform plan -destroy
+    ```
+  - Full destroy (irreversible):
+    ```bash
+    # Optional: purge ECR images to avoid RepositoryNotEmpty errors
+    API_URL=$(terraform output -raw ecr_api_repo_url 2>/dev/null || echo "")
+    FE_URL=$(terraform output -raw ecr_frontend_repo_url 2>/dev/null || echo "")
+    for REPO_URL in "$API_URL" "$FE_URL"; do
+      [[ -z "$REPO_URL" ]] && continue
+      REPO_NAME="${REPO_URL##*/}"
+      IDS=$(aws ecr list-images --repository-name "$REPO_NAME" --query 'imageIds' --output json || echo '[]')
+      [[ "$(jq -r 'length' <<<"$IDS")" == "0" ]] || aws ecr batch-delete-image --repository-name "$REPO_NAME" --image-ids "$IDS" || true
+    done
+    terraform destroy -auto-approve
+    ```
+
 ### Test data tiers (to mirror CI/CD)
 - Tiny (50 encounters): PR checks under 2 min
 - Standard (1,000): daily regression gate
