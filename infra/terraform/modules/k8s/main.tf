@@ -182,7 +182,7 @@ resource "kubernetes_ingress_v1" "frontend_dev" {
           path_type = "Prefix"
           backend {
             service {
-              name = kubernetes_service.frontend_dev.metadata[0].name
+              name = kubernetes_service.frontend_dev[0].metadata[0].name
               port { number = 80 }
             }
           }
@@ -320,7 +320,7 @@ resource "kubernetes_ingress_v1" "frontend_prod" {
           path_type = "Prefix"
           backend {
             service {
-              name = kubernetes_service.frontend_prod.metadata[0].name
+              name = kubernetes_service.frontend_prod[0].metadata[0].name
               port { number = 80 }
             }
           }

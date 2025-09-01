@@ -1,8 +1,8 @@
 output "eks_cluster_endpoint" {
-  value = data.aws_eks_cluster.this.endpoint
+  value = module.eks.cluster_endpoint
 }
 
 output "eks_cluster_ca" {
-  value     = data.aws_eks_cluster.this.certificate_authority[0].data
+  value     = module.eks.cluster_certificate_authority_data
   sensitive = true
 }
