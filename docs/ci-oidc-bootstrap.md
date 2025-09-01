@@ -183,5 +183,4 @@ Example OIDC‑only snippet:
 
 ## Hardening and cleanup
 - Replace `AdministratorAccess` with a least‑privilege policy once Terraform can provision dedicated roles.
-- Remove static AWS key secrets from the repo after confirming OIDC works.
 - Expand the trust policy `sub` patterns only as needed (e.g., add other branches or environments).
