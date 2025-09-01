@@ -10,7 +10,13 @@ data "aws_route53_zone" "main" {
 // ACM cert is provisioned separately in k8s module and referenced by the Ingress
 
 resource "aws_route53_record" "a_record" {
-  lifecycle { precondition { condition = length(trimspace(var.lb_hostname)) > 0 error_message = "lb_hostname must be non-empty" } }
+  lifecycle {
+    precondition {
+      condition     = length(trimspace(var.lb_hostname)) > 0
+      error_message = "lb_hostname must be non-empty"
+    }
+  }
+
   zone_id = data.aws_route53_zone.main.zone_id
   name    = "${var.subdomain}.cookinupideas.com"
   type    = "A"

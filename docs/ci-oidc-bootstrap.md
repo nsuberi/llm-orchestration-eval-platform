@@ -20,7 +20,7 @@ Set variables:
 ```bash
 # Required: your GitHub repo in OWNER/REPO form
 OWNER_REPO="nsuberi/llm-orchestration-eval-platform"
-# Optional: role name and region
+# Optional: role name and regi on
 ROLE_NAME=${ROLE_NAME:-github-actions-terraform-bootstrap}
 AWS_REGION=${AWS_REGION:-us-east-1}
 ```
@@ -110,6 +110,57 @@ if command -v gh >/dev/null; then
 else
   echo "Please add repo secret AWS_CI_DEPLOY_ROLE_ARN with value: $ROLE_ARN"
 fi
+```
+
+## Also allow an admin IAM user to assume the bootstrap role (optional)
+If you want a human admin user (e.g., `nsuberi`) to be able to run Terraform locally by assuming the same bootstrap role, add a second trust statement allowing `sts:AssumeRole` by that IAM user. This keeps the existing OIDC trust intact.
+
+Set the admin user ARN (replace if different):
+```bash
+ADMIN_USER_ARN=${ADMIN_USER_ARN:-arn:aws:iam::${ACCOUNT_ID}:user/nsuberi}
+```
+
+Create an augmented trust policy with both OIDC and user trust and update the role:
+```bash
+cat > trust-policy-with-admin.json <<'JSON'
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": { "Federated": "arn:aws:iam::ACCOUNT_ID:oidc-provider/token.actions.githubusercontent.com" },
+      "Action": "sts:AssumeRoleWithWebIdentity",
+      "Condition": {
+        "StringEquals": {
+          "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
+        },
+        "StringLike": {
+          "token.actions.githubusercontent.com:sub": [
+            "repo:OWNER_REPO:ref:refs/heads/main",
+            "repo:OWNER_REPO:ref:refs/tags/v*"
+          ]
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Principal": { "AWS": "ADMIN_USER_ARN" },
+      "Action": "sts:AssumeRole"
+    }
+  ]
+}
+JSON
+
+sed -i.bak \
+  "s/ACCOUNT_ID/${ACCOUNT_ID}/g; s|OWNER_REPO|${OWNER_REPO}|g; s|ADMIN_USER_ARN|${ADMIN_USER_ARN}|g" \
+  trust-policy-with-admin.json
+
+aws iam update-assume-role-policy \
+  --role-name "$ROLE_NAME" \
+  --policy-document file://trust-policy-with-admin.json \
+  >/dev/null
+
+echo "Updated $ROLE_NAME trust policy to allow OIDC and ${ADMIN_USER_ARN}"
 ```
 
 ## Update workflows

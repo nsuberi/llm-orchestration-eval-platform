@@ -30,3 +30,6 @@ override.tf.json
 .terraformrc
 terraform.rc
 !.terraform.lock.hcl
+
+# Debug artifacts
+debug-artifacts/    

@@ -47,3 +47,37 @@ Recommendation: For HIPAA-oriented workloads, prefer two clusters. If cost-const
 - Run smoke tests and small-batch runs
 - Tag a release when ready; prod deployment only from tags
 - Use the same Helm chart/kustomize overlays with explicit values for prod (resource requests/limits, autoscaling, PDBs, topology spread)
+
+### EKS API endpoint access (public vs private)
+The EKS control plane exposes an API endpoint that can be reachable privately (inside your VPC), publicly (internet), or both. Our Terraform wrapper exposes:
+
+- `cluster_endpoint_private_access` (default: true)
+- `cluster_endpoint_public_access` (default: true in this repo to simplify bootstrap)
+- `cluster_endpoint_public_access_cidrs` (default: ["0.0.0.0/0"], recommended to restrict)
+
+Considerations by deployment context:
+
+- Local development machine (outside VPC)
+  - Necessity: Requires the public endpoint unless your laptop has a private network path into the VPC (VPN/Direct Connect) or you run Terraform from within the VPC.
+  - More secure options:
+    - Temporarily enable public endpoint with a narrow allowlist (e.g., your current public IP `/32`), then disable after bootstrapping.
+    - Run Terraform from a self-hosted runner or workstation inside the VPC (e.g., EC2 with SSM Session Manager access). Keep endpoint private-only.
+
+- Public GitHub-hosted runners
+  - Necessity: They do not have VPC access, so they require the public endpoint to use the Terraform Kubernetes provider.
+  - Risks: GitHub egress IP ranges are broad and change; allowlisting those ranges is brittle and widens exposure.
+  - More secure options:
+    - Use self-hosted GitHub Actions runners inside your VPC/subnets. Keep endpoint private-only.
+    - Split responsibilities: run Terraform for AWS infra from public runners (no K8s provider), and run Kubernetes changes from a private runner or in-cluster job.
+
+Security implications of enabling the public endpoint:
+- Increased attack surface: the control plane is reachable over the internet at limited IP ranges.
+- Mitigations:
+  - Restrict `cluster_endpoint_public_access_cidrs` to the smallest set possible (ideally specific `/32` egress IPs you control).
+  - Use short-lived AWS credentials (OIDC/STSes) and least-privilege IAM; pair with least-privilege Kubernetes RBAC.
+  - Enable EKS control plane audit logs and monitor for anomalous authZ failures.
+  - Disable the public endpoint after initial setup if ongoing internet access is unnecessary.
+
+Recommended patterns:
+- For local bootstrap: enable public endpoint briefly with a `/32` allowlist; complete setup; then either restrict further or disable.
+- For CI/CD: prefer self-hosted runners in the VPC with a private-only endpoint. If you must use public runners, restrict public CIDRs tightly, and consider moving Kubernetes mutations to a private context.

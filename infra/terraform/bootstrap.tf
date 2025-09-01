@@ -4,21 +4,22 @@ variable "bootstrap_role_name" {
   default     = "github-actions-terraform-bootstrap"
 }
 
+# Root-level data sources used by locals and ARNs below
+data "aws_caller_identity" "current" {}
+data "aws_partition" "current" {}
+
 locals {
-  account_id       = data.aws_caller_identity.current.account_id
-  partition        = data.aws_partition.current.partition
-  region           = var.aws_region
-  admin_user_name  = element(split("/", var.admin_user_arn), length(split("/", var.admin_user_arn)) - 1)
-  cluster_prefix   = var.cluster_name
+  account_id     = data.aws_caller_identity.current.account_id
+  partition      = data.aws_partition.current.partition
+  region         = var.aws_region
+  cluster_prefix = var.cluster_name
 }
 
 data "aws_iam_role" "bootstrap" {
   name = var.bootstrap_role_name
 }
 
-data "aws_iam_user" "bootstrap_admin" {
-  user_name = local.admin_user_name
-}
+// Removed: direct admin user linkage; use bootstrap role assumption instead
 
 # Base policy allowing Terraform to provision current infra (EKS, VPC/networking, ECR)
 # and manage IAM roles/policies needed for this repository's deployments.
@@ -157,9 +158,9 @@ resource "aws_iam_policy" "bootstrap_base" {
 
       # CloudWatch Logs for EKS control plane logging
       {
-        Sid      = "LogsManage"
-        Effect   = "Allow"
-        Action   = [
+        Sid    = "LogsManage"
+        Effect = "Allow"
+        Action = [
           "logs:CreateLogGroup",
           "logs:PutRetentionPolicy",
           "logs:DescribeLogGroups",
@@ -211,9 +212,9 @@ resource "aws_iam_policy" "bootstrap_base" {
 
       # S3 access for Terraform remote state backend key
       {
-        Sid      = "S3StateBucketList"
-        Effect   = "Allow"
-        Action   = [
+        Sid    = "S3StateBucketList"
+        Effect = "Allow"
+        Action = [
           "s3:ListBucket",
           "s3:GetBucketLocation"
         ]
@@ -228,14 +229,27 @@ resource "aws_iam_policy" "bootstrap_base" {
         }
       },
       {
-        Sid      = "S3StateObjectCRUD"
-        Effect   = "Allow"
-        Action   = [
+        Sid    = "S3StateObjectCRUD"
+        Effect = "Allow"
+        Action = [
           "s3:GetObject",
           "s3:PutObject",
           "s3:DeleteObject"
         ]
         Resource = "arn:${local.partition}:s3:::cooking-up-ideas-tf-state/kubernetes-experiment-platform/*"
+      },
+      {
+        Sid    = "S3StateBucketConfig"
+        Effect = "Allow"
+        Action = [
+          "s3:PutBucketVersioning",
+          "s3:GetBucketVersioning",
+          "s3:PutEncryptionConfiguration",
+          "s3:GetEncryptionConfiguration",
+          "s3:PutBucketPublicAccessBlock",
+          "s3:GetBucketPublicAccessBlock"
+        ]
+        Resource = "arn:${local.partition}:s3:::cooking-up-ideas-tf-state"
       },
 
       # No DynamoDB needed; S3 backend uses object lockfile
@@ -257,8 +271,4 @@ resource "aws_iam_role_policy_attachment" "bootstrap_role_base" {
   policy_arn = aws_iam_policy.bootstrap_base.arn
 }
 
-# Also attach to the admin bootstrap IAM user so they can run Terraform initially
-resource "aws_iam_user_policy_attachment" "bootstrap_user_base" {
-  user       = data.aws_iam_user.bootstrap_admin.user_name
-  policy_arn = aws_iam_policy.bootstrap_base.arn
-}
+# Admin users should assume the bootstrap role rather than having this policy directly
