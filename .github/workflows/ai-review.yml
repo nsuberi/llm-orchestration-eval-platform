@@ -23,18 +23,10 @@ jobs:
         id: review
         shell: bash
         run: |
+          review_body=$'MOCK: connect this step to your LLM provider. Checklist:\n- TDD observed?\n- Tests adequate?\n- Security/privacy sane?\n- Acceptance criteria met?\n- Perf implications considered?\n- Docs/Changelog updated?\nVerdict: APPROVE (placeholder)'
           {
             echo 'review<<REVIEW'
-            cat <<'REVIEW'
-MOCK: connect this step to your LLM provider. Checklist:
-- TDD observed?
-- Tests adequate?
-- Security/privacy sane?
-- Acceptance criteria met?
-- Perf implications considered?
-- Docs/Changelog updated?
-Verdict: APPROVE (placeholder)
-REVIEW
+            printf '%s\n' "$review_body"
             echo 'REVIEW'
           } >> "$GITHUB_OUTPUT"
 
