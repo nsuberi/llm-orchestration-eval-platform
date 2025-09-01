@@ -13,16 +13,20 @@ jobs:
       - name: Generate AI review (placeholder)
         id: review
         run: |
-          echo "review<<EOF" >> $GITHUB_OUTPUT
-          echo "MOCK: connect this step to your LLM provider. Checklist:
+          {
+            echo 'review<<REVIEW'
+            cat <<'REVIEW'
+MOCK: connect this step to your LLM provider. Checklist:
 - TDD observed?
 - Tests adequate?
 - Security/privacy sane?
 - Acceptance criteria met?
 - Perf implications considered?
 - Docs/Changelog updated?
-Verdict: APPROVE (placeholder)" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+Verdict: APPROVE (placeholder)
+REVIEW
+            echo 'REVIEW'
+          } >> "$GITHUB_OUTPUT"
       - name: Post review comment
         uses: thollander/actions-comment-pull-request@v2
         with:
