@@ -3,7 +3,7 @@
 Monorepo skeleton for an **LLM orchestration + evidence-linked evaluation** platform.
 
 ## Packages
-- apps/web – TypeScript app stub (NextJS-ready; uses Vitest)
+- apps/frontend – Next.js frontend
 - services/api – FastAPI stub with pytest
 - workers/runner – Python worker stub with pytest
 - packages/schemas – shared types & schema stubs

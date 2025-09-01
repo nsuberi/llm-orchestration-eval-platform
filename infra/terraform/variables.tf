@@ -22,11 +22,6 @@ variable "vpc_cidr" {
   default     = "10.0.0.0/16"
 }
 
-variable "admin_user_arn" {
-  description = "IAM user ARN to trust for role assumption"
-  type        = string
-  default     = "arn:aws:iam::671388079324:user/nsuberi"
-}
 
 variable "enable_dev" {
   description = "Whether to create dev namespace and bindings"
@@ -51,3 +46,17 @@ variable "frontend_image" {
   type        = string
   default     = ""
 }
+
+variable "route53_zone_id" {
+  description = "Hosted Zone ID for cookinupideas.com"
+  type        = string
+  default     = "Z0990573XMA6PHFKL82S"
+}
+
+variable "environment" {
+  description = "Environment label for tagging (dev/prod)"
+  type        = string
+  default     = "dev"
+}
+
+ 

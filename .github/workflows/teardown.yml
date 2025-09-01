@@ -1,0 +1,94 @@
+name: Teardown (Destroy AWS + K8s)
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: Type DESTROY to confirm full teardown
+        required: true
+        default: ""
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: teardown
+  cancel-in-progress: false
+
+jobs:
+  destroy:
+    if: ${{ github.event.inputs.confirm == 'DESTROY' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_CI_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
+
+      - name: Terraform init
+        working-directory: infra/terraform
+        env:
+          TF_IN_AUTOMATION: "true"
+        run: |
+          terraform init -input=false
+
+      - name: Purge ECR images (best-effort)
+        working-directory: infra/terraform
+        env:
+          AWS_PAGER: ""
+        run: |
+          set -euo pipefail
+          # Try to read repo URLs from outputs; continue if not available
+          API_URL=$(terraform output -raw ecr_api_repo_url 2>/dev/null || echo "")
+          FE_URL=$(terraform output -raw ecr_frontend_repo_url 2>/dev/null || echo "")
+
+          purge_repo() {
+            local REPO_URL="$1"
+            if [[ -z "$REPO_URL" ]]; then
+              return 0
+            fi
+            local REPO_NAME
+            REPO_NAME="${REPO_URL##*/}"
+            echo "Purging images in ECR repository: $REPO_NAME"
+            # List all image IDs (digests and tags) and delete in batches; ignore errors
+            IDS=$(aws ecr list-images --repository-name "$REPO_NAME" --query 'imageIds' --output json || echo '[]')
+            if jq -e 'length > 0' <<<"$IDS" >/dev/null 2>&1; then
+              aws ecr batch-delete-image --repository-name "$REPO_NAME" --image-ids "$IDS" || true
+            else
+              echo "No images to delete for $REPO_NAME"
+            fi
+          }
+
+          purge_repo "$API_URL"
+          purge_repo "$FE_URL"
+
+      - name: Terraform destroy (full stack)
+        working-directory: infra/terraform
+        env:
+          TF_IN_AUTOMATION: "true"
+        run: |
+          set -euo pipefail
+          terraform destroy -auto-approve -input=false
+
+      - name: Post-destroy sanity checks
+        run: |
+          echo "Teardown completed. Verify in AWS Console: EKS cluster, ALBs, NAT GW, ECR repos, and VPC are gone."
+
+  guard:
+    # Provide a friendly message if confirm string is wrong
+    if: ${{ github.event.inputs.confirm != 'DESTROY' }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Refusing to run. Set input 'confirm' to 'DESTROY' to proceed."
