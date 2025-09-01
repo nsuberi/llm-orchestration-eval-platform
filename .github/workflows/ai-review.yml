@@ -1,17 +1,27 @@
 name: AI Review
+
 on:
   pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+
 permissions:
   contents: read
   pull-requests: write
+
 jobs:
   ai_review:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Generate AI review (placeholder)
         id: review
+        shell: bash
         run: |
           {
             echo 'review<<REVIEW'
@@ -27,6 +37,7 @@ Verdict: APPROVE (placeholder)
 REVIEW
             echo 'REVIEW'
           } >> "$GITHUB_OUTPUT"
+
       - name: Post review comment
         uses: thollander/actions-comment-pull-request@v2
         with:
