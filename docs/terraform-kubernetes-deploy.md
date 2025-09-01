@@ -27,12 +27,34 @@
 ### CI pipeline (GitHub Actions)
 - On merge to `main`:
   - Build and push images to registry
-  - `terraform plan` (dev)
-  - `terraform apply` (dev) on approval
+  - `terraform plan` (dev) and `terraform apply` (dev)
+  - Prod is NOT deployed by default
 - On tagged release (`v*`):
   - Build with pinned SHAs/tags
   - `terraform plan` (prod)
   - `terraform apply` (prod) requires manual approval and protected environment
+
+### Cost profile and defaults
+- EKS control plane: ~$73/month per cluster in us-east-1 (always-on).
+- Node groups (EC2): varies by instance size and count.
+  - Dev default: `t3.small`, desired=1, min=1, max=2 (approx ~$16–$20/mo per node on-demand + EBS)
+  - Prod default: `t3.large`, desired=2, min=2, max=4 (approx ~$70–$80/mo per node on-demand + EBS)
+- NAT Gateway (enabled, single): ~$32/month + data processing ($0.045/GB). This is often a major hidden cost if there is egress.
+- Load Balancer (ALB for frontend Ingress): ~$16+/month + LCUs depending on traffic.
+
+Defaults chosen in this repo:
+- Prod is disabled by default (`enable_prod=false`).
+- Dev nodes are smaller and cheaper than prod.
+- You can further reduce costs by switching dev capacity to SPOT and/or scaling min to 0 with Cluster Autoscaler/Karpenter.
+
+To change sizes:
+- Edit `infra/terraform/modules/eks/variables.tf` to adjust:
+  - `dev_instance_types`, `dev_desired_size`, `dev_min_size`, `dev_max_size`, `dev_capacity_type`
+  - `prod_instance_types`, `prod_desired_size`, `prod_min_size`, `prod_max_size`, `prod_capacity_type`
+
+To deploy prod manually in CI:
+- In GitHub Actions → Deploy workflow → Run workflow, set `deploy_prod=true`.
+- Or tag a release (`vX.Y.Z`) which triggers the prod job with approval.
 
 ### Kubernetes resources (Helm chart or kustomize)
 - API:

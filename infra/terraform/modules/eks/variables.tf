@@ -27,7 +27,7 @@ variable "enable_dev" {
 variable "enable_prod" {
   description = "Whether to configure prod access entry"
   type        = bool
-  default     = true
+  default     = false
 }
 
 variable "dev_access_role_arn" {
@@ -66,4 +66,58 @@ variable "enable_cluster_creator_admin_permissions" {
   description = "Whether to add the Terraform caller as an EKS cluster admin via access entry"
   type        = bool
   default     = true
+}
+
+# Dev node group settings (smaller, cheaper)
+variable "dev_instance_types" {
+  description = "Instance types for dev node group"
+  type        = list(string)
+  default     = ["t3.small"]
+}
+variable "dev_min_size" {
+  description = "Min size for dev node group"
+  type        = number
+  default     = 1
+}
+variable "dev_max_size" {
+  description = "Max size for dev node group"
+  type        = number
+  default     = 2
+}
+variable "dev_desired_size" {
+  description = "Desired size for dev node group"
+  type        = number
+  default     = 1
+}
+variable "dev_capacity_type" {
+  description = "Capacity type for dev nodes (ON_DEMAND or SPOT)"
+  type        = string
+  default     = "ON_DEMAND"
+}
+
+# Prod node group settings (larger)
+variable "prod_instance_types" {
+  description = "Instance types for prod node group"
+  type        = list(string)
+  default     = ["t3.large"]
+}
+variable "prod_min_size" {
+  description = "Min size for prod node group"
+  type        = number
+  default     = 2
+}
+variable "prod_max_size" {
+  description = "Max size for prod node group"
+  type        = number
+  default     = 4
+}
+variable "prod_desired_size" {
+  description = "Desired size for prod node group"
+  type        = number
+  default     = 2
+}
+variable "prod_capacity_type" {
+  description = "Capacity type for prod nodes (ON_DEMAND or SPOT)"
+  type        = string
+  default     = "ON_DEMAND"
 }

@@ -1,32 +1,35 @@
 name: AI Review
+
 on:
   pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+
 permissions:
   contents: read
   pull-requests: write
+
 jobs:
   ai_review:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Generate AI review (placeholder)
         id: review
+        shell: bash
         run: |
+          review_body=$'MOCK: connect this step to your LLM provider. Checklist:\n- TDD observed?\n- Tests adequate?\n- Security/privacy sane?\n- Acceptance criteria met?\n- Perf implications considered?\n- Docs/Changelog updated?\nVerdict: APPROVE (placeholder)'
           {
             echo 'review<<REVIEW'
-            cat <<'REVIEW'
-MOCK: connect this step to your LLM provider. Checklist:
-- TDD observed?
-- Tests adequate?
-- Security/privacy sane?
-- Acceptance criteria met?
-- Perf implications considered?
-- Docs/Changelog updated?
-Verdict: APPROVE (placeholder)
-REVIEW
+            printf '%s\n' "$review_body"
             echo 'REVIEW'
           } >> "$GITHUB_OUTPUT"
+
       - name: Post review comment
         uses: thollander/actions-comment-pull-request@v2
         with:

@@ -15,14 +15,26 @@ module "eks" {
   cluster_endpoint_public_access        = var.cluster_endpoint_public_access
   cluster_endpoint_public_access_cidrs  = var.cluster_endpoint_public_access_cidrs
 
-  eks_managed_node_groups = {
-    default = {
-      instance_types = ["t3.large"]
-      min_size       = 1
-      max_size       = 4
-      desired_size   = 2
-    }
-  }
+  eks_managed_node_groups = merge(
+    var.enable_dev ? {
+      dev = {
+        instance_types = var.dev_instance_types
+        min_size       = var.dev_min_size
+        max_size       = var.dev_max_size
+        desired_size   = var.dev_desired_size
+        capacity_type  = var.dev_capacity_type
+      }
+    } : {},
+    var.enable_prod ? {
+      prod = {
+        instance_types = var.prod_instance_types
+        min_size       = var.prod_min_size
+        max_size       = var.prod_max_size
+        desired_size   = var.prod_desired_size
+        capacity_type  = var.prod_capacity_type
+      }
+    } : {}
+  )
 
   # Ensure keys are statically known at plan time so downstream for_each does not depend on unknowns
   access_entries = merge(

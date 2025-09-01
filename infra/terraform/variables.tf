@@ -32,7 +32,7 @@ variable "enable_dev" {
 variable "enable_prod" {
   description = "Whether to create prod namespace and bindings"
   type        = bool
-  default     = true
+  default     = false
 }
 
 variable "api_image" {
